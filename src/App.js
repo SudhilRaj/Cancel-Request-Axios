@@ -1,9 +1,13 @@
 import axios from "axios";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Badge, Col, Container, Form, Row } from "react-bootstrap";
+import { useWindowSize } from 'react-use'; //comprehensive collection of custom React Hooks
+import Confetti from 'react-confetti';
 
 const App = () => {
+	const { width, height } = useWindowSize()
 	const [posts, setPosts] = useState([]);
+	const serchRef = useRef("");
 	const cancelCountRef = useRef(0);
 	let requestToken;
 	let controller;
@@ -18,29 +22,32 @@ const App = () => {
 	 */
 	const handleChange = (e) => {
 		const {value} = e.target;
-
 		if(controller){
 			controller.abort()
 		}
 		controller = new AbortController();
 		
-		axios.get(`https://jsonplaceholder.typicode.com/posts?q=${value}`, {
+		axios.get(`https://jsonplaceholder.typicode.com/posts?q=${value.trim()}`, {
 			signal: controller.signal
 		})
 		.then(response => {
-			setPosts(response.data);
-		})
-		.catch(err => {
-			if (axios.isCancel(err)) { // Differentiate real and intentional error
-				console.log("Request Cancelled:", err.message);
-				cancelCountRef.current += 1;
-			} else {
-				console.log(err);
-			}
-		})
-		.finally(() => {
-			// console.log('Request completed, regardless of success or failure.');
-		});
+				if(value.trim() !== ""){
+					setPosts(response.data);
+				}else{
+					setPosts([]);
+				}
+			})
+			.catch(err => {
+				if (axios.isCancel(err)) { // Differentiate real and intentional error
+					console.log("Request Cancelled:", err.message);
+					cancelCountRef.current += 1;
+				} else {
+					console.log(err);
+				}
+			})
+			.finally(() => {
+				// console.log('Request completed, regardless of success or failure.');
+			});
 	}
 
 	/**
@@ -120,12 +127,23 @@ const App = () => {
 
 	return (
 		<div>
-			<Container>
+			{/* Not a big deal, Just tested react-confetti here! 😃 */}
+			<Confetti
+				width={width}
+				height={height}
+				recycle={false} 
+				gravity={0.3}
+				// tweenDuration={10000}
+				// confettiSource={{x:0, y:0}}
+				initialVelocityX={10}
+			/>
+
+			<Container className="mt-4">
 				<h1>Axios Request Cancel Demo</h1>
 				<Form>
 					<Form.Group className="mb-3" controlId="search">
 						<Form.Label>Search</Form.Label>
-						<Form.Control type="text" placeholder="Search" onChange={handleChange} autoComplete="off"/>
+						<Form.Control type="text" placeholder="Type something" onChange={handleChange} autoComplete="off" ref={serchRef}/>
 					</Form.Group>
 				</Form>
 
@@ -133,7 +151,7 @@ const App = () => {
 				<Row>
 					{!!posts.length &&
 					<>
-						{<p>Item Count: {posts.length}</p>}
+						{<p>Results for <b>{serchRef.current.value}</b> ({posts.length} item/s)</p>}
 						{posts.map(post => (
 							<Col key={post.id}>
 								<Badge bg="secondary">{post.title}</Badge>
